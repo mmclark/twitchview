@@ -1,5 +1,19 @@
+var TWITCHY = TWITCHY || {};
 
-var twitchy = {
+
+TWITCHY.Main = (function() {
+
+    function hello() {
+        console.log('hello');
+    }
+
+    return {
+        hello: hello
+    }
+
+})();
+
+var oldtwitchy = {
     proxy: 'https://cors-anywhere.herokuapp.com/',
     url: 'https://wind-bow.gomix.me/twitch-api/channels/freecodecamp/',
 
@@ -23,6 +37,6 @@ var twitchy = {
     }
 };
 
-twitchy.test();
+TWITCHY.Main.hello();
 
 
