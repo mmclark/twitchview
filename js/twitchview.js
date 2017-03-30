@@ -16,10 +16,12 @@ var TWITCHY = TWITCHY || {};
 
 TWITCHY.Main = (function() {
     var streams = [
-	"ESL_SC2", "OgamingSC2", "cretetion", "freecodecamp",
+	"esl_sc2", "OgamingSC2", "cretetion", "freecodecamp",
 	"storbeck", "habathcx", "RobotCaleb", "noobs2ninjas",
 	"brunofin", "comster404",
     ];
+
+    var streamStatus = {};
 
     var proxy = 'https://cors-anywhere.herokuapp.com/';
     var apiurl = 'https://wind-bow.gomix.me/twitch-api';  // channels/freecodecamp/';
@@ -45,18 +47,49 @@ TWITCHY.Main = (function() {
 	var url = proxy + apiurl + '/streams/featured';
 	var fccurl = proxy + apiurl + '/streams/freecodecamp';
 	var queeneurl = proxy + apiurl + '/streams/QueenE';
+	var streamContainer = $('#streams');
 
 	for (var i=0; i < streams.length; i++) {
 	    console.log('---', streams[i], '---');
 	    url = proxy + apiurl + '/streams/' + streams[i];
 	    $.getJSON(url, function(data) {
+	    	console.log(data);
 		var streamname = data._links.channel.split('/').pop();
+		streamStatus[streamname] = data;
+
 		if (data.stream === null) {
 		    console.log(streamname, 'is offline');
 		} else {
 		    console.log(streamname, 'is currently streaming');
 		}
-	    	console.log(data);
+
+		// Retrieve channel information and display on screen
+		$.getJSON(proxy + apiurl + '/channels/' + streamname, function(channelData) {
+		    console.log("--- channelData for", channelData.name, "---");
+		    console.log(channelData);
+
+		    if (channelData.name === undefined) {
+			return;
+		    }
+
+		    var markup = cardtemplate
+			.replace("{{STREAMTITLE}}", channelData.display_name)
+			.replace("{{STREAMIMAGE}}", channelData.profile_banner);
+
+		    console.log("name:", channelData.name, "streamStatus:", streamStatus[channelData.name]);
+
+		    if (streamStatus[channelData.name].stream == null) {
+			markup.replace("{{STREAMTEXT}}", "Currently Offline");
+		    } else {
+			markup.replace("{{STREAMTEXT}}", channelData.status);
+		    }
+
+		    $(markup).appendTo(streamContainer);
+
+		}).fail(function() {
+		    console.log("--- channelData call failed ----");
+		});
+
 	    }).fail(function() {
 	    	console.log("streaminfo call failed");
 	    });
