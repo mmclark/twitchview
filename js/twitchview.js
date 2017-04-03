@@ -16,95 +16,128 @@ var TWITCHY = TWITCHY || {};
 
 TWITCHY.Main = (function() {
     var streams = [
-	"esl_sc2", "OgamingSC2", "cretetion", "freecodecamp",
-	"storbeck", "habathcx", "RobotCaleb", "noobs2ninjas",
-	"brunofin", "comster404",
+        "freecodecamp", "esl_sc2", "OgamingSC2", "cretetion",
+        "storbeck", "habathcx", "RobotCaleb", "noobs2ninjas",
+        "brunofin", "comster404",
     ];
 
     var streamStatus = {};
     var channelInfo = {};
+    var noExistRE = /Channel \'([a-zA-Z0-9_]+)\' does not exist/g;
 
     var proxy = 'https://cors-anywhere.herokuapp.com/';
     var apiurl = 'https://wind-bow.gomix.me/twitch-api';
     var api = proxy + apiurl;
 
     var cardtemplate =
-	'<div class="col-sm-4"> \
+        '<div class="col-sm-4"> \
             <div class="card-block">\
               <img class="card-img-top" src="{{STREAMIMAGE}}" width="300" alt="Card image cap">\
               <h3 class="card-title">{{STREAMTITLE}}</h3>\
-              <p class="card-text">{{STREAMTEXT}}</p>\
+              <p class="card-text">Status: {{STREAMTEXT}}</p>\
               <a href="#" class="btn btn-primary">Go somewhere</a>\
             </div>\
           </div>\
         </div>';
 
+    var simpletemplate = "<li></li>";
 
     /**
      */
     function handleChannelInfo(data) {
-	var streamDiv = $('#streams');
+        var streamDiv = $('#streams'),
+	    matches;
 
-	console.log('--- handleChannelInfo ---');
-	// console.log(data);
+        console.log('--- handleChannelInfo ---');
+        // console.log(data);
 
-	if (data.hasOwnProperty('error')) {
-	    console.log(data.message);
-	} else {
-	    console.log('adding', data.name, 'to the channel list');
-	    channelInfo[data.name] = data;
+        if (data.hasOwnProperty('error')) {
+            // console.log(data);
+            console.log(data.message);
 
-	    var markup = cardtemplate
-		.replace("{{STREAMTITLE}}", data.display_name)
-		.replace("{{STREAMTEXT}}", data.status)
-		.replace("{{STREAMIMAGE}}", data.profile_banner);
-	    $(markup).appendTo(streamDiv);
-	}
+	    matches = noExistRE.exec(data.message);
+	    if (matches.length == 2) {
+		var channelName = matches[1];
+		channelInfo[channelName] = {'status': 404, 'message': data.message};
+	    }
+
+        } else {
+            // console.log('adding', data.name, 'to the channel list');
+            channelInfo[data.name] = data;
+
+	    console.log("streams in list:", streams.length, " channels collected:", Object.keys(channelInfo).length);
+
+            var markup = cardtemplate
+                .replace("{{STREAMTITLE}}", data.display_name)
+                .replace("{{STREAMTEXT}}", data.status)
+                .replace("{{STREAMIMAGE}}", data.profile_banner);
+            $(markup).appendTo(streamDiv);
+        }
     }
 
 
     /**
+     * Callback for stream info API call.  Stores info about each stream
+     * and gets info about each channel.
      */
     function handleStreamInfo(data) {
-	var streamname;
+        var streamname;
 
-	console.log("--- handleStreamInfo ---");
-	//console.log(data);
+        console.log("--- handleStreamInfo ---");
+        //console.log(data);
 
-	streamname = data._links.channel.split('/').pop();
-	streamStatus[streamname] = data;
+        streamname = data._links.channel.split('/').pop();
+        streamStatus[streamname] = data;
 
-	if (data.stream === null) {
-	    console.log(streamname, 'is offline');
-	} else {
-	    console.log(streamname, 'is currently streaming');
-	}
+        if (data.stream === null) {
+            console.log(streamname, 'is offline');
+        } else {
+            console.log(streamname, 'is currently streaming');
+        }
 
-	$.getJSON(api + '/channels/' + streamname, handleChannelInfo).fail(function() {
-	    console.log("Get channel info for", streamname, "failed");
-	});
+        $.getJSON(api + '/channels/' + streamname, handleChannelInfo).fail(function() {
+            console.log("Get channel info for", streamname, "failed");
+        });
     }
 
 
     /**
      */
     function listStreams() {
-	var url;
+        var url;
 
-	for (var i=0; i < streams.length; i++) {
-	    console.log('---', streams[i], '---');
-	    url = api + '/streams/' + streams[i];
-	    $.getJSON(url, handleStreamInfo).fail(function() {
-		console.log("--- channelData call failed ----");
-	    });
-	}
+        for (var i=0; i < streams.length; i++) {
+            console.log('---', streams[i], '---');
+            url = api + '/streams/' + streams[i];
+            $.getJSON(url, handleStreamInfo).fail(function() {
+                console.log("--- channelData call failed ----");
+            });
+        }
     }
 
+    /**
+     * Get info about each channel
+     */
+    function listChannels() {
+        var url, i;
+
+        for (i=0; i < streams.length; i++) {
+            console.log('---', streams[i], '---');
+            url = api + '/channels/' + streams[i];
+            $.getJSON(url, handleChannelInfo).fail(function() {
+                console.log("--- channelData call failed ----");
+            });
+        }
+    }
+
+
     return {
-	listStreams: listStreams
+        listStreams: listStreams,
+        listChannels: listChannels
     };
 
 })();
 
 
-TWITCHY.Main.listStreams();
+// TWITCHY.Main.listStreams();
+TWITCHY.Main.listChannels();
