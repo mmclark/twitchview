@@ -22,9 +22,12 @@ TWITCHY.Main = (function() {
     ];
 
     var streamStatus = {};
+    var channelInfo = {};
 
     var proxy = 'https://cors-anywhere.herokuapp.com/';
-    var apiurl = 'https://wind-bow.gomix.me/twitch-api';  // channels/freecodecamp/';
+    var apiurl = 'https://wind-bow.gomix.me/twitch-api';
+    var api = proxy + apiurl;
+
     var cardtemplate =
 	'<div class="col-sm-4"> \
             <div class="card-block">\
@@ -36,176 +39,72 @@ TWITCHY.Main = (function() {
           </div>\
         </div>';
 
-    //              <img  style="float:right; margin:1em;" src="{{STREAMIMAGE}}"  alt="Image for twitch stream"> \
 
-    function hello() {
-	console.log('hello from twitchy');
+    /**
+     */
+    function handleChannelInfo(data) {
+	var streamDiv = $('#streams');
+
+	console.log('--- handleChannelInfo ---');
+	// console.log(data);
+
+	if (data.hasOwnProperty('error')) {
+	    console.log(data.message);
+	} else {
+	    console.log('adding', data.name, 'to the channel list');
+	    channelInfo[data.name] = data;
+
+	    var markup = cardtemplate
+		.replace("{{STREAMTITLE}}", data.display_name)
+		.replace("{{STREAMTEXT}}", data.status)
+		.replace("{{STREAMIMAGE}}", data.profile_banner);
+	    $(markup).appendTo(streamDiv);
+	}
     }
 
+
+    /**
+     */
+    function handleStreamInfo(data) {
+	var streamname;
+
+	console.log("--- handleStreamInfo ---");
+	//console.log(data);
+
+	streamname = data._links.channel.split('/').pop();
+	streamStatus[streamname] = data;
+
+	if (data.stream === null) {
+	    console.log(streamname, 'is offline');
+	} else {
+	    console.log(streamname, 'is currently streaming');
+	}
+
+	$.getJSON(api + '/channels/' + streamname, handleChannelInfo).fail(function() {
+	    console.log("Get channel info for", streamname, "failed");
+	});
+    }
+
+
+    /**
+     */
     function listStreams() {
-	console.log('listStreams ENTER');
-	var url = proxy + apiurl + '/streams/featured';
-	var fccurl = proxy + apiurl + '/streams/freecodecamp';
-	var queeneurl = proxy + apiurl + '/streams/QueenE';
-	var streamContainer = $('#streams');
+	var url;
 
 	for (var i=0; i < streams.length; i++) {
 	    console.log('---', streams[i], '---');
-	    url = proxy + apiurl + '/streams/' + streams[i];
-	    $.getJSON(url, function(data) {
-	    	console.log(data);
-		var streamname = data._links.channel.split('/').pop();
-		streamStatus[streamname] = data;
-
-		if (data.stream === null) {
-		    console.log(streamname, 'is offline');
-		} else {
-		    console.log(streamname, 'is currently streaming');
-		}
-
-		// Retrieve channel information and display on screen
-		$.getJSON(proxy + apiurl + '/channels/' + streamname, function(channelData) {
-		    console.log("--- channelData for", channelData.name, "---");
-		    console.log(channelData);
-
-		    if (channelData.name === undefined) {
-			return;
-		    }
-
-		    var markup = cardtemplate
-			.replace("{{STREAMTITLE}}", channelData.display_name)
-			.replace("{{STREAMIMAGE}}", channelData.profile_banner);
-
-		    console.log("name:", channelData.name, "streamStatus:", streamStatus[channelData.name]);
-
-		    if (streamStatus[channelData.name].stream == null) {
-			markup.replace("{{STREAMTEXT}}", "Currently Offline");
-		    } else {
-			markup.replace("{{STREAMTEXT}}", channelData.status);
-		    }
-
-		    $(markup).appendTo(streamContainer);
-
-		}).fail(function() {
-		    console.log("--- channelData call failed ----");
-		});
-
-	    }).fail(function() {
-	    	console.log("streaminfo call failed");
+	    url = api + '/streams/' + streams[i];
+	    $.getJSON(url, handleStreamInfo).fail(function() {
+		console.log("--- channelData call failed ----");
 	    });
 	}
-
-	/*
-	$.getJSON(queeneurl, function(data) {
-	    console.log("fcc info---------------------------");
-	    console.log(data);
-
-	    // if (data.stream === null) {
-	    // 	console.log("fcc is offline channel url:", data._links.channel);
-	    // 	$.getJSON(proxy+apiurl+'/channels/QueenE', function(data) {
-	    // 	  console.log("channel info ----------------------------");
-	    // 	  console.log(data);
-
-	    // 	  var markup = cardtemplate
-	    // 	    .replace("{{STREAMTITLE}}", data.display_name)
-	    // 	    .replace("{{STREAMTEXT}}", data.status)
-	    // 	    .replace("{{STREAMIMAGE}}", data.logo);
-	    // 	  $(markup).appendTo(streams);
-
-	    // 	}).fail(function() {
-	    // 	  console.log('getting channel info failed');
-	    // 	});
-	    // }
-
-	    $.getJSON(proxy+apiurl+'/channels/freecodecamp', function(data) {
-		console.log("channel info ----------------------------");
-		console.log(data);
-
-		var markup = cardtemplate
-		    .replace("{{STREAMTITLE}}", data.display_name)
-		    .replace("{{STREAMTEXT}}", data.status)
-		    .replace("{{STREAMIMAGE}}", data.profile_banner);
-		$(markup).appendTo(streams);
-
-	    }).fail(function() {
-		console.log('getting channel info failed');
-	    });
-
-	    $.getJSON(proxy+apiurl+'/channels/queene', function(data) {
-		console.log("channel info ----------------------------");
-		console.log(data);
-
-		var markup = cardtemplate
-		    .replace("{{STREAMTITLE}}", data.display_name)
-		    .replace("{{STREAMTEXT}}", data.status)
-		    .replace("{{STREAMIMAGE}}", data.profile_banner);
-		$(markup).appendTo(streams);
-
-	    }).fail(function() {
-		console.log('getting channel info failed');
-	    });
-
-	    // var streams = $('#streams');
-	    // for (var i=0; i < data.featured.length; i++) {
-	    // 	var markup = cardtemplate
-	    // 	    .replace("{{STREAMTITLE}}", data.featured[i].title)
-	    // 	    .replace("{{STREAMTEXT}}", data.featured[i].text)
-	    // 	    .replace("{{STREAMIMAGE}}", data.featured[i].image);
-	    // 	$(markup).appendTo(streams);
-	    // }
-	}).fail(function() {
-	    console.log('call to', url, 'failed');
-	});
-	*/
-	/*
-	  $.getJSON(url, function(data) {
-	  console.log("featured info---------------------------");
-	  console.log(data);
-	  var streams = $('#streams');
-	  for (var i=0; i < data.featured.length; i++) {
-	  var markup = cardtemplate
-	  .replace("{{STREAMTITLE}}", data.featured[i].title)
-	  .replace("{{STREAMTEXT}}", data.featured[i].text)
-	  .replace("{{STREAMIMAGE}}", data.featured[i].image);
-	  $(markup).appendTo(streams);
-	  }
-	  }).fail(function() {
-	  console.log('call to', url, 'failed');
-	  });
-        */
-
-    } // listStreams()
+    }
 
     return {
-	hello: hello,
 	listStreams: listStreams
     };
 
 })();
 
-var oldtwitchy = {
-    proxy: 'https://cors-anywhere.herokuapp.com/',
-    url: 'https://wind-bow.gomix.me/twitch-api/channels/freecodecamp/',
 
-    test: function() {
-        $.getJSON(this.proxy + this.url, function(data) {
-            console.log(data);
-        }).done(function() {
-            console.log("done");
-        }).fail(function() {
-            console.log("fail");
-            console.log(arguments);
-        });
-    },
-
-    getChannels: function () {
-        console.log("getChannels: not implemented yet");
-    },
-
-    getChannelInfo: function () {
-        console.log("getChannelInfo not implemented yet");
-    }
-};
-
-TWITCHY.Main.hello();
 TWITCHY.Main.listStreams();
