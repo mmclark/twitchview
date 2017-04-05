@@ -2,7 +2,7 @@ var TWITCHY = TWITCHY || {};
 
 
 /**
-   - [ ] User Story 1: I can see whether Free Code Camp is currently streaming on Twitch.tv
+   - [x] User Story 1: I can see whether Free Code Camp is currently streaming on Twitch.tv
 
    - [ ] User Story 2: I can click the status output and be sent directly to the Free Code Camp Twitch.tv channel
 
@@ -46,7 +46,8 @@ TWITCHY.Main = (function() {
      */
     function handleChannelInfo(data) {
         var streamDiv = $('#streams'),
-	    matches;
+	    matches,
+	    status;
 
         console.log('--- handleChannelInfo ---');
         // console.log(data);
@@ -58,6 +59,7 @@ TWITCHY.Main = (function() {
 	    matches = noExistRE.exec(data.message);
 	    if (matches.length == 2) {
 		var channelName = matches[1];
+		console.log('****', channelName, ' does not exist ******');
 		channelInfo[channelName] = {'status': 404, 'message': data.message};
 	    }
 
@@ -67,10 +69,18 @@ TWITCHY.Main = (function() {
 
 	    console.log("streams in list:", streams.length, " channels collected:", Object.keys(channelInfo).length);
 
+	    var streamInfo = streamStatus[data.name];
+	    console.log(">>>>>>>>> stream info for", data.name, "is", streamInfo);
+	    if ((streamInfo === undefined) || (streamInfo.stream === null) ){
+		status = "Currently Offline";
+	    } else {
+		status = data.status;
+	    }
+
             var markup = cardtemplate
                 .replace("{{STREAMTITLE}}", data.display_name)
-                .replace("{{STREAMTEXT}}", data.status)
-                .replace("{{STREAMIMAGE}}", data.profile_banner);
+                .replace("{{STREAMTEXT}}", status)
+                .replace("{{STREAMIMAGE}}", data.logo);
             $(markup).appendTo(streamDiv);
         }
     }
@@ -83,8 +93,8 @@ TWITCHY.Main = (function() {
     function handleStreamInfo(data) {
         var streamname;
 
-        console.log("--- handleStreamInfo ---");
-        //console.log(data);
+        // console.log("--- handleStreamInfo ---");
+        // console.log(data);
 
         streamname = data._links.channel.split('/').pop();
         streamStatus[streamname] = data;
@@ -139,5 +149,5 @@ TWITCHY.Main = (function() {
 })();
 
 
-// TWITCHY.Main.listStreams();
-TWITCHY.Main.listChannels();
+TWITCHY.Main.listStreams();
+//TWITCHY.Main.listChannels();
