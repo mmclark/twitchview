@@ -4,7 +4,7 @@ var TWITCHY = TWITCHY || {};
 /**
    - [x] User Story 1: I can see whether Free Code Camp is currently streaming on Twitch.tv
 
-   - [ ] User Story 2: I can click the status output and be sent directly to the Free Code Camp Twitch.tv channel
+   - [x] User Story 2: I can click the status output and be sent directly to the Free Code Camp Twitch.tv channel
 
    - [ ] User Story 3: If a Twitch user is currently streaming, I can see additional details about what they are streaming
 
@@ -30,12 +30,12 @@ TWITCHY.Main = (function() {
     var api = proxy + apiurl;
 
     var cardtemplate =
-        '<div class="col-sm-4"> \
+        '<div class="col-sm-3"> \
             <div class="card-block">\
-              <img class="card-img-top" src="{{STREAMIMAGE}}" width="300" alt="Card image cap">\
+              <img class="card-img-top" src="{{STREAMIMAGE}}" width="200" alt="Card image cap">\
               <h3 class="card-title">{{STREAMTITLE}}</h3>\
-              <p class="card-text">Status: {{STREAMTEXT}}</p>\
-              <a href="#" class="btn btn-primary">Go somewhere</a>\
+              <p class="card-text">Status: <a href="{{CHANNELURL}}" target="_blank">{{STREAMTEXT}}</a></p>\
+              <a href="{{CHANNELURL}}" target="_blank" class="btn btn-primary">Visit Channel</a>\
             </div>\
           </div>\
         </div>';
@@ -66,21 +66,30 @@ TWITCHY.Main = (function() {
         } else {
             // console.log('adding', data.name, 'to the channel list');
             channelInfo[data.name] = data;
-
 	    console.log("streams in list:", streams.length, " channels collected:", Object.keys(channelInfo).length);
+	    console.log(data);
 
 	    var streamInfo = streamStatus[data.name];
-	    console.log(">>>>>>>>> stream info for", data.name, "is", streamInfo);
+	    console.log(">>>>>>>>> stream info for", data.name, "is", streamInfo, "logo:", data.logo);
 	    if ((streamInfo === undefined) || (streamInfo.stream === null) ){
 		status = "Currently Offline";
 	    } else {
 		status = data.status;
 	    }
 
+	    var logo = data.logo;
+	    if (logo === null) {
+		console.log(data.name, "*********************** logo is null ************************");
+		logo = "https://placebear.com/200/200";
+	    }
+
+	    var channelURL = data.url;
+
             var markup = cardtemplate
-                .replace("{{STREAMTITLE}}", data.display_name)
-                .replace("{{STREAMTEXT}}", status)
-                .replace("{{STREAMIMAGE}}", data.logo);
+                .replace(/{{STREAMTITLE}}/g, data.display_name)
+                .replace(/{{STREAMTEXT}}/g, status)
+		.replace(/{{CHANNELURL}}/g, channelURL)
+                .replace(/{{STREAMIMAGE}}/g, logo);
             $(markup).appendTo(streamDiv);
         }
     }
