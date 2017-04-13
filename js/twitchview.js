@@ -6,9 +6,9 @@ var TWITCHY = TWITCHY || {};
 
    - [x] User Story 2: I can click the status output and be sent directly to the Free Code Camp Twitch.tv channel
 
-   - [ ] User Story 3: If a Twitch user is currently streaming, I can see additional details about what they are streaming
+   - [x] User Story 3: If a Twitch user is currently streaming, I can see additional details about what they are streaming
 
-   - [ ] User Story 4: I will see a placeholder navigation if a streamer has closed their Twitch account
+   - [x] User Story 4: I will see a placeholder navigation if a streamer has closed their Twitch account
                        (or the account never existed).  (Test with brunofin and comster404).
  */
 
@@ -23,7 +23,6 @@ TWITCHY.Main = (function() {
 
     var streamStatus = {};
     var channelInfo = {};
-    var noExistRE = /Channel \'([a-zA-Z0-9_]+)\' does not exist/g;
 
     var proxy = 'https://cors-anywhere.herokuapp.com/';
     var apiurl = 'https://wind-bow.gomix.me/twitch-api';
@@ -34,8 +33,19 @@ TWITCHY.Main = (function() {
             <div class="card-block">\
               <img class="card-img-top" src="{{STREAMIMAGE}}" width="200" alt="Card image cap">\
               <h3 class="card-title">{{STREAMTITLE}}</h3>\
-              <p class="card-text">Status: <a href="{{CHANNELURL}}" target="_blank">{{STREAMTEXT}}</a></p>\
+              <p class="card-text"><strong>Status</strong>: {{STREAMSTATUS}}</a></p>\
+              <p class="card-text">{{STREAMINFO}}</p>\
               <a href="{{CHANNELURL}}" target="_blank" class="btn btn-primary">Visit Channel</a>\
+            </div>\
+          </div>\
+        </div>';
+
+    var cardtemplate_noexist =
+        '<div class="col-sm-3"> \
+            <div class="card-block">\
+              <img class="card-img-top" src="http://placehold.it/200x200" width="200" alt="Card image cap">\
+              <h3 class="card-title">{{STREAMTITLE}}</h3>\
+              <p class="card-text">Does not exist</p>\
             </div>\
           </div>\
         </div>';
@@ -47,47 +57,46 @@ TWITCHY.Main = (function() {
     function handleChannelInfo(data) {
         var streamDiv = $('#streams'),
 	    matches,
-	    status;
-
-        console.log('--- handleChannelInfo ---');
-        // console.log(data);
+	    status,
+	    streaminfo,
+	    streamData,
+	    re,
+	    logo,
+	    channelURL,
+	    markup,
+	    channelName;
 
         if (data.hasOwnProperty('error')) {
-            // console.log(data);
-            console.log(data.message);
+	    re = /Channel \'([a-zA-Z0-9_]+)\' does not exist/g;
+	    matches = re.exec(data.message);
 
-	    matches = noExistRE.exec(data.message);
-	    if (matches.length == 2) {
-		var channelName = matches[1];
-		console.log('****', channelName, ' does not exist ******');
+	    if (matches && matches.length == 2) {
+		channelName = matches[1];
 		channelInfo[channelName] = {'status': 404, 'message': data.message};
 	    }
 
+            markup = cardtemplate_noexist.replace(/{{STREAMTITLE}}/g, channelName);
+            $(markup).appendTo(streamDiv);
+
         } else {
-            // console.log('adding', data.name, 'to the channel list');
             channelInfo[data.name] = data;
-	    console.log("streams in list:", streams.length, " channels collected:", Object.keys(channelInfo).length);
-	    console.log(data);
 
-	    var streamInfo = streamStatus[data.name];
-	    console.log(">>>>>>>>> stream info for", data.name, "is", streamInfo, "logo:", data.logo);
-	    if ((streamInfo === undefined) || (streamInfo.stream === null) ){
+	    streamData = streamStatus[data.name];
+	    if ((streamData === undefined) || (streamData.stream === null) ){
 		status = "Currently Offline";
+		streaminfo = "&nbsp;";
 	    } else {
-		status = data.status;
+		status = "Currently Streaming";
+		streaminfo = data.status;
 	    }
 
-	    var logo = data.logo;
-	    if (logo === null) {
-		console.log(data.name, "*********************** logo is null ************************");
-		logo = "https://placebear.com/200/200";
-	    }
+	    logo = data.logo || "https://placebear.com/200/200";
+	    channelURL = data.url;
 
-	    var channelURL = data.url;
-
-            var markup = cardtemplate
+            markup = cardtemplate
                 .replace(/{{STREAMTITLE}}/g, data.display_name)
-                .replace(/{{STREAMTEXT}}/g, status)
+                .replace(/{{STREAMSTATUS}}/g, status)
+                .replace(/{{STREAMINFO}}/g, streaminfo)
 		.replace(/{{CHANNELURL}}/g, channelURL)
                 .replace(/{{STREAMIMAGE}}/g, logo);
             $(markup).appendTo(streamDiv);
@@ -102,17 +111,8 @@ TWITCHY.Main = (function() {
     function handleStreamInfo(data) {
         var streamname;
 
-        // console.log("--- handleStreamInfo ---");
-        // console.log(data);
-
         streamname = data._links.channel.split('/').pop();
         streamStatus[streamname] = data;
-
-        if (data.stream === null) {
-            console.log(streamname, 'is offline');
-        } else {
-            console.log(streamname, 'is currently streaming');
-        }
 
         $.getJSON(api + '/channels/' + streamname, handleChannelInfo).fail(function() {
             console.log("Get channel info for", streamname, "failed");
@@ -126,7 +126,6 @@ TWITCHY.Main = (function() {
         var url;
 
         for (var i=0; i < streams.length; i++) {
-            console.log('---', streams[i], '---');
             url = api + '/streams/' + streams[i];
             $.getJSON(url, handleStreamInfo).fail(function() {
                 console.log("--- channelData call failed ----");
@@ -134,29 +133,11 @@ TWITCHY.Main = (function() {
         }
     }
 
-    /**
-     * Get info about each channel
-     */
-    function listChannels() {
-        var url, i;
-
-        for (i=0; i < streams.length; i++) {
-            console.log('---', streams[i], '---');
-            url = api + '/channels/' + streams[i];
-            $.getJSON(url, handleChannelInfo).fail(function() {
-                console.log("--- channelData call failed ----");
-            });
-        }
-    }
-
-
     return {
-        listStreams: listStreams,
-        listChannels: listChannels
+        listStreams: listStreams
     };
 
 })();
 
 
 TWITCHY.Main.listStreams();
-//TWITCHY.Main.listChannels();
