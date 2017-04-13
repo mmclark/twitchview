@@ -33,7 +33,7 @@ TWITCHY.Main = (function() {
             <div class="card-block">\
               <img class="card-img-top" src="{{STREAMIMAGE}}" width="200" alt="Card image cap">\
               <h3 class="card-title">{{STREAMTITLE}}</h3>\
-              <p class="card-text"><strong>Status</strong>: {{STREAMSTATUS}}</a></p>\
+              <p class="card-text"><strong>Status</strong>: <a href="{{CHANNELURL}}" target="_blank">{{STREAMSTATUS}}</a></p>\
               <p class="card-text">{{STREAMINFO}}</p>\
               <a href="{{CHANNELURL}}" target="_blank" class="btn btn-primary">Visit Channel</a>\
             </div>\
